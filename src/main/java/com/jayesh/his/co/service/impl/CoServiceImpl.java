@@ -52,6 +52,7 @@ public class CoServiceImpl implements CoService {
 	@Autowired
 	private CitizenAppRepo appRepo;
 	FileInputStream pdfFis;
+	File file;
 	@Override
 	public String processCoTriggers() throws SerialException, SQLException, IOException {
 
@@ -78,6 +79,7 @@ public class CoServiceImpl implements CoService {
 					boolean isTriggerUpdated = updateCoTriggerRecord(trigger, pdfFis);
 					if(isTriggerUpdated) {
 						pdfFis.close();
+						file.delete();
 						recordCnt++;
 					}
 					
@@ -96,7 +98,7 @@ public class CoServiceImpl implements CoService {
 
 		Document document = new Document(PageSize.A4);
 		try {
-			File file = new File("CoTrigger" + dtls.getEligId() + ".pdf");
+			file = new File("CoTrigger" + dtls.getEligId() + ".pdf");
 			FileOutputStream fileOutputStream = new FileOutputStream(file);
 			// PdfWriter.getInstance(document, response.getOutputStream());
 			PdfWriter.getInstance(document, fileOutputStream);
@@ -119,8 +121,7 @@ public class CoServiceImpl implements CoService {
 			
 			pdfFis=new FileInputStream(file);
 			fileOutputStream.close();
-			file.delete();
-			//file.deleteOnExit();
+			
 			
 		} catch (DocumentException e) {
 			e.printStackTrace();
