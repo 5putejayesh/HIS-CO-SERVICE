@@ -12,7 +12,6 @@ import java.util.Optional;
 
 import javax.sql.rowset.serial.SerialBlob;
 import javax.sql.rowset.serial.SerialException;
-import javax.websocket.server.ServerEndpoint;
 
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +51,7 @@ public class CoServiceImpl implements CoService {
 	private DcCasesRepo casesRepo;
 	@Autowired
 	private CitizenAppRepo appRepo;
-
+	FileInputStream pdfFis;
 	@Override
 	public String processCoTriggers() throws SerialException, SQLException, IOException {
 
@@ -68,7 +67,7 @@ public class CoServiceImpl implements CoService {
 				CitizenAppEntity citizenAppEntity = appEntity.get();
 				
 				//generate pdf
-				FileInputStream pdfFis = generatePdf(eligDtls);
+				generatePdf(eligDtls);
 				
 				//mail logic
 				String mailBody = "Dear" + citizenAppEntity.getFullName() + ",PFA plan details";
@@ -76,14 +75,9 @@ public class CoServiceImpl implements CoService {
 				boolean isMailSent = emailUtils.sendEmail(citizenAppEntity.getEmail(), "HIS Pland Details", mailBody,
 						pdfFis);
 				if (isMailSent) {
-
-					/*
-					 * CoTriggerEntity triggerEntity = new CoTriggerEntity();
-					 * BeanUtils.copyProperties(trigger, triggerEntity);
-					 */
-
 					boolean isTriggerUpdated = updateCoTriggerRecord(trigger, pdfFis);
 					if(isTriggerUpdated) {
+						pdfFis.close();
 						recordCnt++;
 					}
 					
@@ -98,7 +92,7 @@ public class CoServiceImpl implements CoService {
 	}
 
 	@Override
-	public FileInputStream generatePdf(EligDtls dtls) {
+	public void generatePdf(EligDtls dtls) {
 
 		Document document = new Document(PageSize.A4);
 		try {
@@ -123,15 +117,17 @@ public class CoServiceImpl implements CoService {
 			document.add(table);
 			document.close();
 			
-			FileInputStream fis=new FileInputStream(file);
+			pdfFis=new FileInputStream(file);
+			fileOutputStream.close();
 			file.delete();
-			return fis;
+			//file.deleteOnExit();
+			
 		} catch (DocumentException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return null;
+		
 	}
 
 	private PdfPTable createPdfTable() {

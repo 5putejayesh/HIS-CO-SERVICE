@@ -26,12 +26,12 @@ public class EmailUtils {
 		
 		try {
 			MimeMessage mimeMessage = mailSender.createMimeMessage();
-			MimeMessageHelper messageHelper=new MimeMessageHelper(mimeMessage);
+			MimeMessageHelper messageHelper=new MimeMessageHelper(mimeMessage,true);
 			
 			messageHelper.setTo(to);
 			messageHelper.setSubject(subject);
 			messageHelper.setText(body,true);
-			messageHelper.addAttachment("PlanDtls", new ByteArrayResource(IOUtils.byteArray()));
+			messageHelper.addAttachment("PlanDtls.pdf", new ByteArrayResource(IOUtils.toByteArray(fis)));
 			
 			mailSender.send(mimeMessage);
 			

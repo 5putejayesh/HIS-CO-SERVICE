@@ -13,7 +13,7 @@ import com.jayesh.his.co.entity.EligDtls;
 public interface CoService {
 	
 	public String processCoTriggers() throws SerialException, SQLException, IOException;
-	public FileInputStream generatePdf(EligDtls dtls);
+	public void generatePdf(EligDtls dtls);
 	public boolean updateCoTriggerRecord(CoTriggerEntity triggerEntity, FileInputStream fis);
 
 }
