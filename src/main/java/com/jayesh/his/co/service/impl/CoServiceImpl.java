@@ -14,6 +14,7 @@ import javax.sql.rowset.serial.SerialBlob;
 import javax.sql.rowset.serial.SerialException;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -93,8 +94,8 @@ public class CoServiceImpl implements CoService {
 		}
 	}
 
-	@Override
-	public void generatePdf(EligDtls dtls) {
+
+	private void generatePdf(EligDtls dtls) {
 
 		Document document = new Document(PageSize.A4);
 		try {
@@ -152,8 +153,8 @@ public class CoServiceImpl implements CoService {
 		table.addCell(dtls.getPlanStatus());
 		table.addCell(dtls.getPlanStartDate().toString());
 		table.addCell(dtls.getPlanEndDate().toString());
-		table.addCell(String.valueOf(dtls.getBenefitAmt()));
-		table.addCell(dtls.getDenielReason());
+		table.addCell(StringUtils.isNotEmpty(String.valueOf(dtls.getBenefitAmt()))?String.valueOf(dtls.getBenefitAmt()):"NA");
+		table.addCell(StringUtils.isNotEmpty(dtls.getDenielReason())?dtls.getDenielReason():"NA");
 	}
 
 	private void writePdfHeader(PdfPTable table) {
@@ -187,8 +188,8 @@ public class CoServiceImpl implements CoService {
 		table.addCell(cell);
 	}
 
-	@Override
-	public boolean updateCoTriggerRecord(CoTriggerEntity triggerEntity, FileInputStream fis) {
+	
+	private boolean updateCoTriggerRecord(CoTriggerEntity triggerEntity, FileInputStream fis) {
 		try {
 			 
 			Blob fileBolb = new SerialBlob(IOUtils.toByteArray(fis));
