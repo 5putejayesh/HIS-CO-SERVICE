@@ -3,33 +3,24 @@ package com.jayesh.his.co.service.impl;
 import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.sql.Blob;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
-import javax.sql.rowset.serial.SerialBlob;
-import javax.sql.rowset.serial.SerialException;
-
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.jayesh.his.co.entity.CitizenAppEntity;
+import com.jayesh.his.co.binding.CoResponse;
 import com.jayesh.his.co.entity.CoTriggerEntity;
-import com.jayesh.his.co.entity.DcCase;
 import com.jayesh.his.co.entity.EligDtls;
-import com.jayesh.his.co.repo.CitizenAppRepo;
 import com.jayesh.his.co.repo.CoTriggerRepo;
-import com.jayesh.his.co.repo.DcCasesRepo;
 import com.jayesh.his.co.repo.EligDtlsRepo;
 import com.jayesh.his.co.service.CoService;
 import com.jayesh.his.co.util.EmailUtils;
 import com.lowagie.text.Document;
-import com.lowagie.text.DocumentException;
 import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
 import com.lowagie.text.PageSize;
@@ -48,59 +39,57 @@ public class CoServiceImpl implements CoService {
 	private CoTriggerRepo triggerRepo;
 	@Autowired
 	private EmailUtils emailUtils;
-	@Autowired
-	private DcCasesRepo casesRepo;
-	@Autowired
-	private CitizenAppRepo appRepo;
-	FileInputStream pdfFis;
-	File file;
+	
+	
 	@Override
-	public String processCoTriggers() throws SerialException, SQLException, IOException {
+	public CoResponse processCoTriggers()  {
 
 		List<CoTriggerEntity> pendingTriggers = triggerRepo.findByTriggerStatus("Pending");
-		int recordCnt = 0;
+		CoResponse response=new CoResponse();
+		response.setTotalTriggers(Long.valueOf(pendingTriggers.size()));
+		Long success=0L;
+		Long failed=0L;
 		for (CoTriggerEntity trigger : pendingTriggers) {
 			Optional<EligDtls> eligdtlsEntity = eligDtlsRepo.findById(trigger.getEligId());
 			if (eligdtlsEntity.isPresent()) {
 				EligDtls eligDtls = eligdtlsEntity.get();
-				Optional<DcCase> caseEntiOptional = casesRepo.findByCaseNo(eligDtls.getCaseNo());
-				DcCase dcCase = caseEntiOptional.get();
-				Optional<CitizenAppEntity> appEntity = appRepo.findById(dcCase.getAppId());
-				CitizenAppEntity citizenAppEntity = appEntity.get();
+				
+				
+				
 				
 				//generate pdf
-				generatePdf(eligDtls);
-				
-				//mail logic
-				String mailBody = "Dear" + citizenAppEntity.getFullName() + ",PFA plan details";
-
-				boolean isMailSent = emailUtils.sendEmail(citizenAppEntity.getEmail(), "HIS Pland Details", mailBody,
-						pdfFis);
-				if (isMailSent) {
-					boolean isTriggerUpdated = updateCoTriggerRecord(trigger, pdfFis);
-					if(isTriggerUpdated) {
-						pdfFis.close();
-						file.delete();
-						recordCnt++;
-					}
-					
+				try {
+					generatePdfAndSendMail(eligDtls,trigger);
+					success++;
+				} catch (Exception e) {
+					e.printStackTrace();
+					failed++;
 				}
+				
+				
+				
+				
 			}
 		}
-		if (recordCnt > 0) {
-			return recordCnt + " triggers processed succesfully";
-		} else {
-			return "No trigger is in pending status";
-		}
+		response.setFailedTrigger(failed);
+		response.setSuccessTriggers(success);
+		
+		return response;
 	}
 
 
-	private void generatePdf(EligDtls dtls) {
+	private void generatePdfAndSendMail(EligDtls dtls,CoTriggerEntity triggerEntity) throws Exception {
 
 		Document document = new Document(PageSize.A4);
-		try {
-			file = new File("CoTrigger" + dtls.getEligId() + ".pdf");
-			FileOutputStream fileOutputStream = new FileOutputStream(file);
+		
+			File file = new File("CoTrigger" + dtls.getEligId() + ".pdf");
+			FileOutputStream fileOutputStream=null;
+			try {
+				fileOutputStream = new FileOutputStream(file);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			// PdfWriter.getInstance(document, response.getOutputStream());
 			PdfWriter.getInstance(document, fileOutputStream);
 			document.open();
@@ -120,15 +109,15 @@ public class CoServiceImpl implements CoService {
 			document.add(table);
 			document.close();
 			
-			pdfFis=new FileInputStream(file);
+			
 			fileOutputStream.close();
-			
-			
-		} catch (DocumentException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+			String mailBody = "Dear" + dtls.getHoldersName() + ",PFA plan details";
+
+			emailUtils.sendEmail(dtls.getEmail(), "HIS Pland Details", mailBody,
+					file);
+			updateCoTriggerRecord(triggerEntity,file);
+			file.delete();
+		
 		
 	}
 
@@ -189,19 +178,23 @@ public class CoServiceImpl implements CoService {
 	}
 
 	
-	private boolean updateCoTriggerRecord(CoTriggerEntity triggerEntity, FileInputStream fis) {
-		try {
+	private void updateCoTriggerRecord(CoTriggerEntity triggerEntity, File file) throws IOException {
+		FileInputStream fis= new FileInputStream(file);
 			 
-			Blob fileBolb = new SerialBlob(IOUtils.toByteArray(fis));
-			triggerEntity.setFileData(fileBolb);
+			//Blob fileBolb = new SerialBlob(IOUtils.toByteArray(fis));
+			
+			byte [] fileArray=new byte[(byte)file.length()];
+			
+			fis.read(fileArray);
+			
+			triggerEntity.setFileData(fileArray);
 			triggerEntity.setTriggerStatus("Processed");
 			triggerRepo.save(triggerEntity);
-			return true;
+			fis.close();
 
-		} catch (SQLException | IOException e) {
-			e.printStackTrace();
-		}
-		return false;
+		
+		
+		
 	}
 
 }

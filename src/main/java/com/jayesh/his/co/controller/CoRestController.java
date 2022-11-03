@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.jayesh.his.co.binding.CoResponse;
 import com.jayesh.his.co.service.CoService;
 
 @RestController
@@ -20,8 +21,8 @@ public class CoRestController {
 	private CoService coService;
 	
 	@GetMapping("/process")
-	public ResponseEntity<String> processPendingTriggers() throws SerialException, SQLException, IOException{
-		String response = coService.processCoTriggers();
+	public ResponseEntity<CoResponse> processPendingTriggers() throws SerialException, SQLException, IOException{
+		CoResponse response = coService.processCoTriggers();
 		
 		return new ResponseEntity<>(response,HttpStatus.OK);
 	}

@@ -1,5 +1,6 @@
 package com.jayesh.his.co.util;
 
+import java.io.File;
 import java.io.FileInputStream;
 
 import javax.mail.internet.MimeMessage;
@@ -21,7 +22,7 @@ public class EmailUtils {
 	@Autowired
 	private JavaMailSender mailSender;
 	
-	public boolean sendEmail(String to,String subject,String body,FileInputStream fis) {
+	public boolean sendEmail(String to,String subject,String body,File file) {
 		boolean isMailSent=false;
 		
 		try {
@@ -31,8 +32,8 @@ public class EmailUtils {
 			messageHelper.setTo(to);
 			messageHelper.setSubject(subject);
 			messageHelper.setText(body,true);
-			messageHelper.addAttachment("PlanDtls.pdf", new ByteArrayResource(IOUtils.toByteArray(fis)));
-			
+			//messageHelper.addAttachment("PlanDtls.pdf", new ByteArrayResource(IOUtils.toByteArray(new FileInputStream(file))));
+			messageHelper.addAttachment("PlanDtls.pdf", file);;
 			mailSender.send(mimeMessage);
 			
 			isMailSent=true;
