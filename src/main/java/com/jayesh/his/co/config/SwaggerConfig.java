@@ -16,7 +16,8 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 @Configuration
 @EnableSwagger2
 public class SwaggerConfig {
-
+/*
+ * */
 	private ApiInfo apiInfo() {
 		return new ApiInfo("CO module of HIS application",
 				"CO Module to send plan details", "1", "Term of Service",
